@@ -1,0 +1,165 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/teri-model-${environment}-alb" ],
+          [ ".", "TargetResponseTime", ".", "." ],
+          [ ".", "HTTPCode_ELB_5XX_Count", ".", "." ],
+          [ ".", "HTTPCode_Target_4XX_Count", ".", "." ],
+          [ ".", "HTTPCode_Target_5XX_Count", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Application Load Balancer Metrics",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ECS", "CPUUtilization", "ServiceName", "teri-model-${environment}-api-gateway", "ClusterName", "teri-model-${environment}-cluster" ],
+          [ ".", "MemoryUtilization", ".", ".", ".", "." ],
+          [ ".", "CPUUtilization", "ServiceName", "teri-model-${environment}-auth", "ClusterName", "teri-model-${environment}-cluster" ],
+          [ ".", "MemoryUtilization", ".", ".", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "ECS Service Resource Utilization",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "teri-model-${environment}-db" ],
+          [ ".", "DatabaseConnections", ".", "." ],
+          [ ".", "ReadLatency", ".", "." ],
+          [ ".", "WriteLatency", ".", "." ],
+          [ ".", "FreeableMemory", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "RDS Database Metrics",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ElastiCache", "CPUUtilization", "CacheClusterId", "teri-model-${environment}-redis-001" ],
+          [ ".", "CurrConnections", ".", "." ],
+          [ ".", "CacheHitRate", ".", "." ],
+          [ ".", "CacheMissRate", ".", "." ],
+          [ ".", "NetworkBytesIn", ".", "." ],
+          [ ".", "NetworkBytesOut", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "ElastiCache Redis Metrics",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "TERI/Application", "TranslatorRequests", "Service", "translator" ],
+          [ ".", "TranslatorErrors", ".", "." ],
+          [ ".", "TranslatorLatency", ".", "." ],
+          [ ".", "MediatorRequests", "Service", "mediator" ],
+          [ ".", "MediatorErrors", ".", "." ],
+          [ ".", "MediatorLatency", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "AI Service Metrics",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 12,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "TERI/Business", "UserRegistrations", "Environment", "${environment}" ],
+          [ ".", "CouplesPaired", ".", "." ],
+          [ ".", "SectionsCompleted", ".", "." ],
+          [ ".", "GamesPlayed", ".", "." ],
+          [ ".", "ActiveUsers", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Business Metrics",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 12,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/S3", "BucketSizeBytes", "BucketName", "teri-model-${environment}-media", "StorageType", "StandardStorage" ],
+          [ ".", "NumberOfObjects", ".", ".", ".", "AllStorageTypes" ],
+          [ "AWS/S3", "AllRequests", "BucketName", "teri-model-${environment}-media" ],
+          [ ".", "4xxErrors", ".", "." ],
+          [ ".", "5xxErrors", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "S3 Storage Metrics",
+        "period": 300
+      }
+    },
+    {
+      "type": "log",
+      "x": 0,
+      "y": 18,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE '/aws/ecs/teri-model-${environment}' | fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100",
+        "region": "us-west-2",
+        "title": "Recent Application Errors",
+        "view": "table"
+      }
+    }
+  ]
+}

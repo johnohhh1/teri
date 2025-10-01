@@ -1,0 +1,324 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: teri-postgres
+    environment:
+      POSTGRES_DB: teri_development
+      POSTGRES_USER: teri_user
+      POSTGRES_PASSWORD: teri_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teri_user -d teri_development"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teri-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: teri-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass teri_redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "teri_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teri-network
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: teri-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - PERSIST_DIRECTORY=/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teri-network
+
+  # MinIO (S3-compatible storage for local development)
+  minio:
+    image: minio/minio:latest
+    container_name: teri-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: teri_minio_user
+      MINIO_ROOT_PASSWORD: teri_minio_password
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teri-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: ../Dockerfile.api
+      target: development
+    container_name: teri-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - CHROMA_URL=http://chromadb:8000
+      - JWT_SECRET=your-jwt-secret-key
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=teri_minio_user
+      - S3_SECRET_KEY=teri_minio_password
+      - S3_BUCKET=teri-development
+    volumes:
+      - ./services/api-gateway:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth
+      dockerfile: ../Dockerfile.api
+      target: development
+    container_name: teri-auth
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - JWT_SECRET=your-jwt-secret-key
+      - JWT_EXPIRES_IN=1h
+      - REFRESH_TOKEN_EXPIRES_IN=30d
+    volumes:
+      - ./services/auth:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Training Service
+  training-service:
+    build:
+      context: ./services/training
+      dockerfile: ../Dockerfile.api
+      target: development
+    container_name: teri-training
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=teri_minio_user
+      - S3_SECRET_KEY=teri_minio_password
+      - S3_BUCKET=teri-development
+    volumes:
+      - ./services/training:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Translator Service (ML)
+  translator-service:
+    build:
+      context: ./services/translator
+      dockerfile: ../Dockerfile.ml
+      target: development
+    container_name: teri-translator
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - CHROMA_URL=http://chromadb:8000
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL_NAME=gpt-4
+    volumes:
+      - ./services/translator:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Mediator Service (ML)
+  mediator-service:
+    build:
+      context: ./services/mediator
+      dockerfile: ../Dockerfile.ml
+      target: development
+    container_name: teri-mediator
+    ports:
+      - "8002:8000"
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - CHROMA_URL=http://chromadb:8000
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=teri_minio_user
+      - S3_SECRET_KEY=teri_minio_password
+      - S3_BUCKET=teri-development
+      - WHISPER_API_KEY=${WHISPER_API_KEY}
+      - LLM_API_KEY=${LLM_API_KEY}
+    volumes:
+      - ./services/mediator:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Games Service
+  games-service:
+    build:
+      context: ./services/games
+      dockerfile: ../Dockerfile.api
+      target: development
+    container_name: teri-games
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - CHROMA_URL=http://chromadb:8000
+    volumes:
+      - ./services/games:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Progress Service
+  progress-service:
+    build:
+      context: ./services/progress
+      dockerfile: ../Dockerfile.api
+      target: development
+    container_name: teri-progress
+    ports:
+      - "3004:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+    volumes:
+      - ./services/progress:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notifications
+      dockerfile: ../Dockerfile.api
+      target: development
+    container_name: teri-notifications
+    ports:
+      - "3005:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://teri_user:teri_password@postgres:5432/teri_development
+      - REDIS_URL=redis://:teri_redis_password@redis:6379
+      - PUSH_NOTIFICATION_KEY=${PUSH_NOTIFICATION_KEY}
+      - EMAIL_SMTP_HOST=${EMAIL_SMTP_HOST}
+      - EMAIL_SMTP_USER=${EMAIL_SMTP_USER}
+      - EMAIL_SMTP_PASS=${EMAIL_SMTP_PASS}
+    volumes:
+      - ./services/notifications:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teri-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+  minio_data:
+
+networks:
+  teri-network:
+    driver: bridge

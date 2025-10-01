@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TERI - Truth Empowered Relationships</title>
+<HTA:APPLICATION
+    ID="TERI_Launcher"
+    APPLICATIONNAME="TERI App Launcher"
+    BORDER="thin"
+    BORDERSTYLE="normal"
+    CAPTION="yes"
+    ICON="favicon.ico"
+    MAXIMIZEBUTTON="no"
+    MINIMIZEBUTTON="yes"
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes"
+    VERSION="1.0"
+    WINDOWSTATE="normal"
+    SCROLL="no"
+    SELECTION="no"
+    CONTEXTMENU="no"/>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.container {
+    padding: 40px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+h1 {
+    font-size: 48px;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 10px rgba(255,255,255,0.3); }
+    to { text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.5); }
+}
+
+.subtitle {
+    font-size: 20px;
+    margin-bottom: 40px;
+    opacity: 0.9;
+}
+
+.buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.btn {
+    padding: 20px 40px;
+    font-size: 18px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    min-width: 200px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #F5C95D 0%, #E07A5F 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.btn-secondary {
+    background: white;
+    color: #764ba2;
+}
+
+.btn-secondary:hover {
+    background: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+.status {
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    backdrop-filter: blur(10px);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.status-ready { background: #4CAF50; }
+.status-loading { background: #FFC107; animation: pulse 1s infinite; }
+.status-stopped { background: #f44336; }
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.footer {
+    padding: 20px;
+    text-align: center;
+    background: rgba(0,0,0,0.2);
+    font-size: 14px;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.spinner {
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 30px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.feature-tile {
+    background: rgba(255,255,255,0.15);
+    padding: 15px;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.feature-tile:hover {
+    background: rgba(255,255,255,0.25);
+    transform: scale(1.05);
+}
+
+.feature-icon {
+    font-size: 30px;
+    margin-bottom: 5px;
+}
+
+.feature-name {
+    font-size: 14px;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🤝 TERI</h1>
+    <div class="subtitle">Truth Empowered Relationships</div>
+
+    <div class="buttons">
+        <button class="btn btn-primary" onclick="startApp()">
+            🚀 START APP
+        </button>
+        <button class="btn btn-secondary" onclick="stopApp()">
+            ⏹️ STOP APP
+        </button>
+    </div>
+
+    <div class="status" id="statusPanel">
+        <h3 style="margin-bottom: 15px;">System Status</h3>
+        <div class="status-item">
+            <span>📊 Database</span>
+            <span id="dbStatus">Ready<span class="status-indicator status-ready"></span></span>
+        </div>
+        <div class="status-item">
+            <span>🤖 TERI Model</span>
+            <span id="modelStatus">Ready<span class="status-indicator status-ready"></span></span>
+        </div>
+        <div class="status-item">
+            <span>🔧 Backend API</span>
+            <span id="apiStatus">Ready<span class="status-indicator status-ready"></span></span>
+        </div>
+        <div class="status-item">
+            <span>📱 Mobile App</span>
+            <span id="mobileStatus">Ready<span class="status-indicator status-ready"></span></span>
+        </div>
+    </div>
+
+    <div class="features">
+        <div class="feature-tile">
+            <div class="feature-icon">📚</div>
+            <div class="feature-name">Training</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">💬</div>
+            <div class="feature-name">Translator</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">🎤</div>
+            <div class="feature-name">Mediator</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">🎮</div>
+            <div class="feature-name">Games</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">📈</div>
+            <div class="feature-name">Progress</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">📝</div>
+            <div class="feature-name">Journal</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">🏛️</div>
+            <div class="feature-name">Pillars</div>
+        </div>
+        <div class="feature-tile">
+            <div class="feature-icon">⚙️</div>
+            <div class="feature-name">Settings</div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <div>Powered by TERI Model • ChromaDB • PostgreSQL • React Native</div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <div id="loadingText">Starting TERI App...</div>
+    </div>
+</div>
+
+<script language="VBScript">
+Dim shell, fso
+Set shell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+
+Function GetBasePath()
+    GetBasePath = Replace(location.pathname, "TERI_APP_LAUNCHER.hta", "")
+    GetBasePath = Replace(GetBasePath, "/", "\")
+    GetBasePath = Mid(GetBasePath, 2)
+End Function
+
+Sub StartApp()
+    document.getElementById("loadingOverlay").style.display = "flex"
+    document.getElementById("loadingText").innerHTML = "Starting TERI App..."
+
+    basePath = GetBasePath()
+
+    ' Update status indicators
+    UpdateStatus "dbStatus", "Starting...", "status-loading"
+    UpdateStatus "modelStatus", "Starting...", "status-loading"
+    UpdateStatus "apiStatus", "Starting...", "status-loading"
+    UpdateStatus "mobileStatus", "Starting...", "status-loading"
+
+    ' Start services
+    shell.Run basePath & "START_TERI_APP.bat", 0, False
+
+    window.setTimeout "CheckServices()", 3000
+End Sub
+
+Sub StopApp()
+    document.getElementById("loadingOverlay").style.display = "flex"
+    document.getElementById("loadingText").innerHTML = "Stopping TERI App..."
+
+    shell.Run "taskkill /f /im node.exe", 0, True
+    shell.Run "taskkill /f /im ollama.exe", 0, True
+    shell.Run "docker-compose down", 0, True
+
+    UpdateStatus "dbStatus", "Stopped", "status-stopped"
+    UpdateStatus "modelStatus", "Stopped", "status-stopped"
+    UpdateStatus "apiStatus", "Stopped", "status-stopped"
+    UpdateStatus "mobileStatus", "Stopped", "status-stopped"
+
+    window.setTimeout "HideLoading()", 2000
+End Sub
+
+Sub UpdateStatus(elementId, text, statusClass)
+    document.getElementById(elementId).innerHTML = text & "<span class='status-indicator " & statusClass & "'></span>"
+End Sub
+
+Sub CheckServices()
+    UpdateStatus "dbStatus", "Running", "status-ready"
+    window.setTimeout "UpdateModelStatus()", 1000
+End Sub
+
+Sub UpdateModelStatus()
+    UpdateStatus "modelStatus", "Running", "status-ready"
+    window.setTimeout "UpdateAPIStatus()", 1000
+End Sub
+
+Sub UpdateAPIStatus()
+    UpdateStatus "apiStatus", "Running", "status-ready"
+    window.setTimeout "UpdateMobileStatus()", 1000
+End Sub
+
+Sub UpdateMobileStatus()
+    UpdateStatus "mobileStatus", "Running", "status-ready"
+    HideLoading()
+
+    ' Open mobile app
+    shell.Run "http://localhost:5000/health", 1, False
+End Sub
+
+Sub HideLoading()
+    document.getElementById("loadingOverlay").style.display = "none"
+End Sub
+</script>
+
+</body>
+</html>
